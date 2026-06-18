@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Flask
+instance/
+.webassets-cache
+
+# 数据库（包含用户数据）
+*.db
+*.sqlite
+*.sqlite3
+
+# 上传的图片文件（不提交用户数据）
+uploads/
+
+# 环境变量 / 密钥配置
+.env
+.env.local
+config.local.py
+secrets.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地备份（含真实Key）
+app.py.bak
+
+# Logs
+*.log
+logs/
