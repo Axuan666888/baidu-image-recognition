@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图片智能识别管理系统</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --primary: #6C63FF;
+  --primary-light: #EEF0FF;
+  --success: #00C48C;
+  --success-light: #E6FBF5;
+  --warning: #FFB800;
+  --warning-light: #FFF8E6;
+  --danger: #FF5C5C;
+  --danger-light: #FFF0F0;
+  --info: #3B82F6;
+  --info-light: #EFF6FF;
+  --gray: #F3F4F6;
+  --gray-mid: #9CA3AF;
+  --gray-dark: #374151;
+  --text: #1F2937;
+  --border: #E5E7EB;
+  --white: #FFFFFF;
+  --sidebar-w: 240px;
+  --header-h: 64px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --radius: 12px;
+}
+
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F7F8FC; color: var(--text); min-height: 100vh; }
+
+/* ===== Layout ===== */
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: var(--sidebar-w);
+  background: linear-gradient(160deg, #6C63FF 0%, #4F46E5 60%, #7C3AED 100%);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh;
+  z-index: 100; transition: transform .3s;
+}
+
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+.sidebar-logo .logo-icon {
+  width: 38px; height: 38px; background: rgba(255,255,255,0.2);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+}
+.sidebar-logo .logo-icon svg { width: 22px; height: 22px; fill: white; }
+.sidebar-logo span { color: white; font-size: 16px; font-weight: 600; }
+
+.sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.nav-section { margin-bottom: 24px; }
+.nav-section-title { color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 0 8px 8px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+  color: rgba(255,255,255,0.75); font-size: 14px;
+  transition: background .15s, color .15s; margin-bottom: 2px;
+}
+.nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+.nav-item.active { background: rgba(255,255,255,0.2); color: white; font-weight: 500; }
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-count { margin-left: auto; background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.85); font-size: 11px; padding: 1px 6px; border-radius: 10px; min-width: 20px; text-align: center; }
+.nav-item.active .nav-count { background: rgba(255,255,255,0.35); }
+
+.sidebar-footer {
+  padding: 16px; border-top: 1px solid rgba(255,255,255,0.15);
+}
+.api-badge {
+  background: rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.api-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
+.api-dot.demo { background: var(--warning); }
+.api-badge span { color: rgba(255,255,255,0.8); font-size: 12px; }
+
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+
+.header {
+  height: var(--header-h); background: white; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; position: sticky; top: 0; z-index: 50;
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.page-title { font-size: 18px; font-weight: 600; color: var(--text); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;
+  border: none; transition: all .15s; font-weight: 500;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: #5B54E8; }
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { background: #00A77A; }
+.btn-outline { background: white; color: var(--gray-dark); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { background: #E54444; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn svg { width: 16px; height: 16px; }
+
+.content { padding: 24px; flex: 1; }
+
+/* ===== Stats Cards ===== */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: white; border-radius: var(--radius); padding: 20px;
+  border: 1px solid var(--border); position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+}
+.stat-card.total::before { background: var(--primary); }
+.stat-card.done::before { background: var(--success); }
+.stat-card.pending::before { background: var(--warning); }
+.stat-card.error::before { background: var(--danger); }
+.stat-icon {
+  width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+}
+.stat-card.total .stat-icon { background: var(--primary-light); }
+.stat-card.done .stat-icon { background: var(--success-light); }
+.stat-card.pending .stat-icon { background: var(--warning-light); }
+.stat-card.error .stat-icon { background: var(--danger-light); }
+.stat-card.total .stat-icon svg { color: var(--primary); }
+.stat-card.done .stat-icon svg { color: var(--success); }
+.stat-card.pending .stat-icon svg { color: var(--warning); }
+.stat-card.error .stat-icon svg { color: var(--danger); }
+.stat-icon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; }
+.stat-num { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.stat-label { font-size: 13px; color: var(--gray-mid); }
+
+/* ===== Toolbar ===== */
+.toolbar {
+  background: white; border-radius: var(--radius); padding: 16px 20px;
+  border: 1px solid var(--border); margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.search-box {
+  flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px;
+  background: var(--gray); border-radius: 8px; padding: 8px 12px;
+}
+.search-box svg { width: 16px; height: 16px; color: var(--gray-mid); stroke: currentColor; fill: none; }
+.search-box input { border: none; background: transparent; outline: none; font-size: 14px; color: var(--text); width: 100%; }
+.filter-select {
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 14px; color: var(--text); background: white; cursor: pointer; outline: none;
+}
+.view-toggle { display: flex; background: var(--gray); border-radius: 8px; padding: 2px; }
+.view-btn { padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: all .15s; color: var(--gray-mid); }
+.view-btn.active { background: white; color: var(--primary); }
+.view-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; display: block; }
+
+/* ===== Drop Zone ===== */
+.drop-zone {
+  border: 2px dashed var(--primary); background: var(--primary-light); border-radius: var(--radius);
+  padding: 40px; text-align: center; cursor: pointer; margin-bottom: 24px;
+  transition: all .2s; position: relative;
+}
+.drop-zone:hover, .drop-zone.drag-over { background: #E0E1FF; border-color: #4F46E5; }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-icon {
+  width: 56px; height: 56px; background: rgba(108,99,255,0.15); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+}
+.drop-icon svg { width: 28px; height: 28px; stroke: var(--primary); fill: none; }
+.drop-title { font-size: 16px; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+.drop-sub { font-size: 13px; color: var(--gray-mid); }
+.drop-formats { font-size: 12px; color: var(--gray-mid); margin-top: 8px; }
+
+/* ===== Progress ===== */
+.upload-progress { display: none; margin-top: 12px; }
+.progress-bar { height: 6px; background: rgba(255,255,255,0.4); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width .3s; width: 0%; }
+
+/* ===== Image Grid ===== */
+.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.image-list { display: flex; flex-direction: column; gap: 10px; }
+
+.image-card {
+  background: white; border-radius: var(--radius); border: 1px solid var(--border);
+  overflow: hidden; transition: all .2s; cursor: pointer;
+}
+.image-card:hover { border-color: var(--primary); box-shadow: 0 4px 20px rgba(108,99,255,0.12); transform: translateY(-2px); }
+
+.card-thumb { position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--gray); }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+.image-card:hover .card-thumb img { transform: scale(1.04); }
+.card-thumb .thumb-overlay {
+  position: absolute; inset: 0; background: rgba(108,99,255,0.7); opacity: 0;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity .2s;
+}
+.image-card:hover .thumb-overlay { opacity: 1; }
+.thumb-overlay .btn { background: white; color: var(--primary); padding: 8px 14px; }
+
+.card-body { padding: 12px; }
+.card-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 6px; }
+.card-meta { display: flex; align-items: center; justify-content: space-between; }
+.status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500;
+}
+.status-done { background: var(--success-light); color: var(--success); }
+.status-pending { background: var(--warning-light); color: #b45309; }
+.status-error { background: var(--danger-light); color: var(--danger); }
+.card-date { font-size: 11px; color: var(--gray-mid); }
+
+/* ===== List View ===== */
+.list-item {
+  background: white; border-radius: 10px; border: 1px solid var(--border);
+  padding: 12px 16px; display: flex; align-items: center; gap: 16px;
+  transition: all .2s; cursor: pointer;
+}
+.list-item:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+.list-thumb { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--gray); }
+.list-info { flex: 1; min-width: 0; }
+.list-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.tag-chip {
+  padding: 1px 8px; border-radius: 12px; font-size: 11px;
+  background: var(--primary-light); color: var(--primary);
+}
+.list-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  z-index: 1000; display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: white; border-radius: 16px; width: 100%; max-width: 860px;
+  max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+}
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-size: 17px; font-weight: 600; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--gray);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.modal-close:hover { background: var(--danger-light); }
+.modal-close svg { width: 18px; height: 18px; stroke: var(--gray-dark); fill: none; }
+.modal-body { padding: 24px; overflow-y: auto; display: flex; gap: 24px; flex: 1; }
+
+.modal-left { width: 300px; flex-shrink: 0; }
+.modal-left img { width: 100%; border-radius: 10px; border: 1px solid var(--border); }
+.modal-img-info { margin-top: 12px; }
+.info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray); font-size: 13px; }
+.info-row:last-child { border-bottom: none; }
+.info-label { color: var(--gray-mid); }
+.info-val { font-weight: 500; }
+
+.modal-right { flex: 1; min-width: 0; }
+.modal-right .section-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.section-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-primary { background: var(--primary); }
+.dot-success { background: var(--success); }
+
+/* ===== Result Tags ===== */
+.result-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.result-tag {
+  padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: default;
+  display: flex; align-items: center; gap: 6px;
+}
+.result-tag .score-bar {
+  width: 40px; height: 4px; background: rgba(0,0,0,0.1); border-radius: 2px; overflow: hidden;
+}
+.result-tag .score-fill { height: 100%; background: currentColor; border-radius: 2px; opacity: 0.6; }
+
+.result-top { background: #FFF3E0; color: #E65100; }
+.result-high { background: var(--primary-light); color: var(--primary); }
+.result-mid { background: var(--info-light); color: var(--info); }
+.result-low { background: var(--gray); color: var(--gray-dark); }
+
+/* Score chart */
+.score-list { display: flex; flex-direction: column; gap: 8px; }
+.score-item { display: flex; align-items: center; gap: 10px; }
+.score-name { font-size: 13px; width: 80px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.score-track { flex: 1; height: 8px; background: var(--gray); border-radius: 4px; overflow: hidden; }
+.score-track-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+.score-pct { font-size: 12px; color: var(--gray-mid); width: 38px; text-align: right; flex-shrink: 0; }
+
+/* Notes */
+.notes-area {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; resize: vertical; min-height: 70px; font-family: inherit;
+  transition: border-color .15s; outline: none;
+}
+.notes-area:focus { border-color: var(--primary); }
+.tags-input {
+  width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-family: inherit; outline: none; transition: border-color .15s;
+}
+.tags-input:focus { border-color: var(--primary); }
+
+/* ===== Type Selector ===== */
+.type-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.type-tab {
+  padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;
+  border: 1.5px solid var(--border); background: white; color: var(--gray-dark); transition: all .15s;
+}
+.type-tab:hover, .type-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+/* ===== Loading / Empty ===== */
+.loading { display: flex; align-items: center; justify-content: center; padding: 60px; flex-direction: column; gap: 12px; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--primary-light); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { text-align: center; padding: 60px; }
+.empty-icon { width: 64px; height: 64px; background: var(--gray); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+.empty-icon svg { width: 32px; height: 32px; stroke: var(--gray-mid); fill: none; }
+.empty-text { color: var(--gray-mid); font-size: 14px; }
+
+/* ===== Toast ===== */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--gray-dark); color: white; padding: 12px 18px; border-radius: 10px;
+  font-size: 14px; display: flex; align-items: center; gap: 8px;
+  animation: slideIn .25s ease; max-width: 320px;
+}
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+.toast.warning { background: var(--warning); color: var(--text); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ===== Pagination ===== */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 24px; }
+.page-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+  background: white; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; color: var(--text);
+}
+.page-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.page-btn:disabled { opacity: .4; cursor: default; }
+
+/* ===== Recognize Btn ===== */
+.recognize-btn-area { margin: 16px 0; }
+.analyze-btn {
+  width: 100%; padding: 12px; border-radius: 10px;
+  background: linear-gradient(90deg, var(--primary) 0%, #7C3AED 100%);
+  color: white; font-size: 15px; font-weight: 600; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity .15s;
+}
+.analyze-btn:hover { opacity: .9; }
+.analyze-btn:disabled { opacity: .5; cursor: not-allowed; }
+.analyze-btn svg { width: 20px; height: 20px; stroke: white; fill: none; }
+
+.demo-notice {
+  background: var(--warning-light); border: 1px solid var(--warning);
+  border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #92400e;
+  margin-bottom: 12px; display: none;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .modal-body { flex-direction: column; }
+  .modal-left { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 16l4-8 4 5 2-3 4 6H4z"/><circle cx="18" cy="7" r="2"/></svg>
+      </div>
+      <span>图智管理台</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-title">工作台</div>
+        <div class="nav-item active" onclick="showPage('gallery')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          图片库
+        </div>
+        <div class="nav-item" onclick="showPage('upload')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          上传图片
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title">按识别类型筛选</div>
+        <div class="nav-item" id="nav-type-all" onclick="filterByType('')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          全部图片
+          <span class="nav-count" id="cnt-all"></span>
+        </div>
+        <div class="nav-item" id="nav-type-general_basic" onclick="filterByType('general_basic')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          通用识别
+          <span class="nav-count" id="cnt-general_basic"></span>
+        </div>
+        <div class="nav-item" id="nav-type-plant" onclick="filterByType('plant')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22v-7l-2-2"/><path d="M17 8c.8 3.3-1.3 5.6-2 6"/><path d="M7 8c-.8 3.3 1.3 5.6 2 6"/><path d="M12 15C8 15 4 12 4 8c0 0 4-4 8-4s8 4 8 4c0 4-4 7-8 7z"/></svg>
+          植物识别
+          <span class="nav-count" id="cnt-plant"></span>
+        </div>
+        <div class="nav-item" id="nav-type-animal" onclick="filterByType('animal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2 .352-3.5 2.179-3.5 4.398 0 .741.186 1.44.5 2.042"/><path d="M14.5 3c-1.923-.321-3.5.782-3.5 2.172 0 .624.213 1.259.5 1.795"/><path d="M5 9c1 1.5 2 2.5 3.5 3C10 13 12 13 13.5 12c1.5-1 2.5-2 3.5-3"/><path d="M5.5 9S7 18 12 20c5-2 6.5-11 6.5-11"/></svg>
+          动物识别
+          <span class="nav-count" id="cnt-animal"></span>
+        </div>
+        <div class="nav-item" id="nav-type-dish" onclick="filterByType('dish')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          菜品识别
+          <span class="nav-count" id="cnt-dish"></span>
+        </div>
+        <div class="nav-item" id="nav-type-logo" onclick="filterByType('logo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          Logo识别
+          <span class="nav-count" id="cnt-logo"></span>
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="api-badge">
+        <div class="api-dot" id="apiDot"></div>
+        <span id="apiStatus">百度AI 已连接</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="header">
+      <div class="header-left">
+        <div class="page-title" id="pageTitle">图片库</div>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-primary" onclick="showPage('upload')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          上传图片
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Upload Page -->
+      <div id="page-upload" style="display:none">
+        <div class="drop-zone" id="dropZone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <input type="file" id="fileInput" multiple accept="image/*" onchange="handleFileSelect(event)">
+          <div class="drop-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="drop-title">拖拽图片到此处，或点击上传</div>
+          <div class="drop-sub">支持同时上传多张图片</div>
+          <div class="drop-formats">支持格式：JPG · PNG · GIF · BMP · WebP · 最大 20MB</div>
+          <div class="upload-progress" id="uploadProgress">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          </div>
+        </div>
+        <div id="uploadList"></div>
+      </div>
+
+      <!-- Gallery Page -->
+      <div id="page-gallery">
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card total">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3" ry="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+            <div class="stat-num" id="statTotal">0</div>
+            <div class="stat-label">全部图片</div>
+          </div>
+          <div class="stat-card done">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="stat-num" id="statDone">0</div>
+            <div class="stat-label">已识别</div>
+          </div>
+          <div class="stat-card pending">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div class="stat-num" id="statPending">0</div>
+            <div class="stat-label">待识别</div>
+          </div>
+          <div class="stat-card error">
+            <div class="stat-icon"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+            <div class="stat-num" id="statError">0</div>
+            <div class="stat-label">识别失败</div>
+          </div>
+        </div>
+
+        <!-- Active type banner -->
+        <div id="typeBanner" style="display:none;background:var(--primary-light);border:1px solid #c7c5ff;border-radius:10px;padding:10px 16px;margin-bottom:14px;display:none;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;color:var(--primary);font-weight:500" id="typeBannerText"></span>
+          <button onclick="filterByType('')" style="font-size:12px;color:var(--primary);background:none;border:none;cursor:pointer;text-decoration:underline">清除筛选</button>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="searchInput" placeholder="搜索图片名称、标签或识别内容..." oninput="debounceSearch()">
+          </div>
+          <select class="filter-select" id="statusFilter" onchange="loadImages()">
+            <option value="">全部状态</option>
+            <option value="pending">待识别</option>
+            <option value="done">已识别</option>
+            <option value="error">失败</option>
+          </select>
+          <div class="view-toggle">
+            <div class="view-btn active" id="gridViewBtn" onclick="setView('grid')" title="网格视图">
+              <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </div>
+            <div class="view-btn" id="listViewBtn" onclick="setView('list')" title="列表视图">
+              <svg viewBox="0 0 24 24" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="loadImages()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            刷新
+          </button>
+        </div>
+
+        <!-- Grid -->
+        <div id="imageContainer"></div>
+        <div id="paginationContainer" class="pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">图片详情</span>
+      <button class="modal-close" onclick="closeModalBtn()">
+        <svg viewBox="0 0 24 24" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-left">
+        <img id="modalImg" src="" alt="">
+        <div class="modal-img-info">
+          <div class="info-row"><span class="info-label">文件名</span><span class="info-val" id="infoName" style="text-align:right;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span></div>
+          <div class="info-row"><span class="info-label">文件大小</span><span class="info-val" id="infoSize"></span></div>
+          <div class="info-row"><span class="info-label">上传时间</span><span class="info-val" id="infoTime"></span></div>
+          <div class="info-row"><span class="info-label">识别状态</span><span class="info-val" id="infoStatus"></span></div>
+        </div>
+        <div style="margin-top:16px">
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px">备注</label>
+          <textarea class="notes-area" id="notesInput" placeholder="添加备注..."></textarea>
+          <label style="font-size:13px;font-weight:500;display:block;margin:10px 0 6px">标签（逗号分隔）</label>
+          <input type="text" class="tags-input" id="tagsInput" placeholder="如：风景, 户外, 自然">
+          <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%" onclick="saveNotes()">保存备注</button>
+          <button class="btn btn-danger btn-sm" style="margin-top:6px;width:100%" onclick="deleteCurrentImage()">删除图片</button>
+        </div>
+      </div>
+      <div class="modal-right">
+        <div class="section-title">
+          <span class="dot dot-primary"></span>
+          选择识别类型
+        </div>
+        <div class="type-tabs">
+          <div class="type-tab active" data-type="general_basic" onclick="selectType(this)">通用识别</div>
+          <div class="type-tab" data-type="plant" onclick="selectType(this)">植物识别</div>
+          <div class="type-tab" data-type="animal" onclick="selectType(this)">动物识别</div>
+          <div class="type-tab" data-type="dish" onclick="selectType(this)">菜品识别</div>
+          <div class="type-tab" data-type="logo" onclick="selectType(this)">Logo识别</div>
+        </div>
+        <div class="recognize-btn-area">
+          <button class="analyze-btn" id="analyzeBtn" onclick="doRecognize()">
+            <svg viewBox="0 0 24 24" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span id="analyzeBtnText">开始百度AI识别</span>
+          </button>
+        </div>
+        <div class="demo-notice" id="demoNotice">
+          当前为演示模式，返回的是模拟数据。请在 app.py 中配置真实的百度AI API Key 以启用真实识别。
+        </div>
+        <div id="recognizeResult">
+          <div class="empty" style="padding:40px 20px">
+            <div class="empty-icon"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+            <div class="empty-text">点击上方按钮开始智能识别</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+const API = '';
+let currentPage = 1;
+let currentView = 'grid';
+let currentImageId = null;
+let selectedType = 'general_basic';
+let searchTimer = null;
+let activeFilter = '';
+
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', () => {
+  showPage('gallery');
+  loadStats();
+  loadImages();
+  checkApiMode();
+});
+
+function checkApiMode() {
+  fetch('/api/test-token').then(r => r.json()).then(d => {
+    const dot = document.getElementById('apiDot');
+    const label = document.getElementById('apiStatus');
+    if (d.success) {
+      dot.className = 'api-dot';
+      label.textContent = '百度AI 已连接';
+    } else {
+      dot.className = 'api-dot demo';
+      label.textContent = 'API未连接';
+    }
+  }).catch(() => {});
+}
+
+// ===== Page Navigation =====
+function showPage(name) {
+  document.getElementById('page-gallery').style.display = name === 'gallery' ? 'block' : 'none';
+  document.getElementById('page-upload').style.display = name === 'upload' ? 'block' : 'none';
+  document.getElementById('pageTitle').textContent = name === 'gallery' ? '图片库' : '上传图片';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item')[name === 'gallery' ? 0 : 1]?.classList.add('active');
+  if (name === 'gallery') {
+    // 回到图片库时重置类型筛选
+    if (activeFilter) {
+      activeFilter = '';
+      document.getElementById('typeBanner').style.display = 'none';
+      document.getElementById('nav-type-all')?.classList.add('active');
+    }
+    loadImages();
+  }
+}
+
+const TYPE_LABELS = {
+  '': '全部图片',
+  'general_basic': '通用识别',
+  'advanced_general': '通用识别',
+  'plant': '植物识别',
+  'animal': '动物识别',
+  'dish': '菜品识别',
+  'logo': 'Logo识别'
+};
+
+function filterByType(type) {
+  activeFilter = type;
+  currentPage = 1;
+
+  // 更新侧边栏高亮
+  document.querySelectorAll('[id^="nav-type-"]').forEach(el => el.classList.remove('active'));
+  const targetNav = document.getElementById('nav-type-' + (type || 'all'));
+  if (targetNav) targetNav.classList.add('active');
+
+  // 更新顶部 banner
+  const banner = document.getElementById('typeBanner');
+  const bannerText = document.getElementById('typeBannerText');
+  if (type) {
+    banner.style.display = 'flex';
+    bannerText.textContent = '当前筛选：' + (TYPE_LABELS[type] || type) + ' · 仅显示使用该类型识别过的图片';
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // 更新页面标题
+  document.getElementById('pageTitle').textContent = type ? (TYPE_LABELS[type] || type) : '图片库';
+
+  // 显示图库页并加载
+  document.getElementById('page-gallery').style.display = 'block';
+  document.getElementById('page-upload').style.display = 'none';
+  document.querySelectorAll('.nav-item')[0].classList.remove('active');
+  loadImages();
+}
+
+// ===== Stats =====
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    document.getElementById('statTotal').textContent = d.total || 0;
+    document.getElementById('statDone').textContent = d.done || 0;
+    document.getElementById('statPending').textContent = d.pending || 0;
+    document.getElementById('statError').textContent = d.error || 0;
+
+    // 更新侧边栏各类型数量徽章
+    const allCnt = document.getElementById('cnt-all');
+    if (allCnt) allCnt.textContent = d.total || 0;
+
+    const typeCounts = d.type_counts || {};
+    ['general_basic','plant','animal','dish','logo'].forEach(t => {
+      const el = document.getElementById('cnt-' + t);
+      if (el) el.textContent = typeCounts[t] || 0;
+    });
+  } catch(e) {}
+}
+
+// ===== Images =====
+async function loadImages() {
+  const search = document.getElementById('searchInput').value.trim();
+  const status = document.getElementById('statusFilter').value;
+  const container = document.getElementById('imageContainer');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><span style="color:var(--gray-mid);font-size:14px">加载中...</span></div>';
+
+  try {
+    const params = new URLSearchParams({ page: currentPage, per_page: 12, search, status });
+    if (activeFilter) params.set('recognize_type', activeFilter);
+    const r = await fetch(`/api/images?${params}`);
+    const d = await r.json();
+    renderImages(d.items || []);
+    renderPagination(d.total || 0, d.page || 1);
+    loadStats();
+  } catch(e) {
+    container.innerHTML = '<div class="empty"><div class="empty-text">加载失败，请刷新重试</div></div>';
+  }
+}
+
+function renderImages(items) {
+  const container = document.getElementById('imageContainer');
+  if (!items.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><div class="empty-text">暂无图片，快去上传吧</div></div>';
+    return;
+  }
+
+  if (currentView === 'grid') {
+    container.className = 'image-grid';
+    container.innerHTML = items.map(item => `
+      <div class="image-card" onclick="openDetail(${item.id})">
+        <div class="card-thumb">
+          <img src="/uploads/${item.filename}" alt="${item.original_name}" loading="lazy">
+          <div class="thumb-overlay">
+            <button class="btn btn-sm" onclick="event.stopPropagation();openDetail(${item.id})">查看详情</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-name" title="${item.original_name}">${item.original_name}</div>
+          <div class="card-meta">
+            <span class="status-badge status-${item.status}">${statusLabel(item.status)}</span>
+            <span class="card-date">${item.upload_time?.slice(5,16) || ''}</span>
+          </div>
+          ${getTopKeywords(item)}
+        </div>
+      </div>
+    `).join('');
+  } else {
+    container.className = 'image-list';
+    container.innerHTML = items.map(item => `
+      <div class="list-item" onclick="openDetail(${item.id})">
+        <img class="list-thumb" src="/uploads/${item.filename}" alt="${item.original_name}" loading="lazy">
+        <div class="list-info">
+          <div class="list-name">${item.original_name}</div>
+          <div class="list-tags">${getTagChips(item)}</div>
+        </div>
+        <span class="status-badge status-${item.status}">${statusLabel(item.status)}</span>
+        <span style="font-size:12px;color:var(--gray-mid)">${item.upload_time?.slice(0,16) || ''}</span>
+        <div class="list-actions">
+          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openDetail(${item.id})">详情</button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+function getTopKeywords(item) {
+  const res = item.recognize_result;
+  if (!res || !res.result) return '';
+  const top3 = res.result.slice(0, 3).map(r => r.keyword).join(' · ');
+  return `<div style="font-size:11px;color:var(--gray-mid);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${top3}</div>`;
+}
+
+function getTagChips(item) {
+  const res = item.recognize_result;
+  if (!res || !res.result) return '<span style="font-size:12px;color:var(--gray-mid)">未识别</span>';
+  return res.result.slice(0, 4).map(r =>
+    `<span class="tag-chip">${r.keyword}</span>`
+  ).join('');
+}
+
+function statusLabel(s) {
+  return {pending: '待识别', done: '已识别', error: '失败'}[s] || s;
+}
+
+// ===== Pagination =====
+function renderPagination(total, page) {
+  const totalPages = Math.ceil(total / 12);
+  const container = document.getElementById('paginationContainer');
+  if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === page) html += `<button class="page-btn active">${i}</button>`;
+    else if (i === 1 || i === totalPages || Math.abs(i - page) <= 2)
+      html += `<button class="page-btn" onclick="goPage(${i})">${i}</button>`;
+    else if (Math.abs(i - page) === 3)
+      html += `<span style="padding:0 4px;color:var(--gray-mid)">…</span>`;
+  }
+  html += `<button class="page-btn" onclick="goPage(${page+1})" ${page>=totalPages?'disabled':''}>›</button>`;
+  container.innerHTML = html;
+}
+
+function goPage(p) { currentPage = p; loadImages(); window.scrollTo(0, 0); }
+
+// ===== View Toggle =====
+function setView(v) {
+  currentView = v;
+  document.getElementById('gridViewBtn').classList.toggle('active', v === 'grid');
+  document.getElementById('listViewBtn').classList.toggle('active', v === 'list');
+  loadImages();
+}
+
+// ===== Search =====
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { currentPage = 1; loadImages(); }, 400);
+}
+
+// ===== Upload =====
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.add('drag-over');
+}
+function handleDragLeave() {
+  document.getElementById('dropZone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  uploadFiles(Array.from(e.dataTransfer.files));
+}
+function handleFileSelect(e) {
+  uploadFiles(Array.from(e.target.files));
+}
+
+async function uploadFiles(files) {
+  if (!files.length) return;
+  const imgFiles = files.filter(f => f.type.startsWith('image/'));
+  if (!imgFiles.length) { showToast('请选择图片文件', 'warning'); return; }
+
+  const list = document.getElementById('uploadList');
+  list.innerHTML = '';
+  document.getElementById('uploadProgress').style.display = 'block';
+
+  for (let i = 0; i < imgFiles.length; i++) {
+    const file = imgFiles[i];
+    const pct = Math.round(((i + 0.5) / imgFiles.length) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+
+    const itemEl = document.createElement('div');
+    itemEl.style.cssText = 'background:white;border-radius:10px;padding:12px 16px;margin-bottom:8px;border:1px solid var(--border);display:flex;align-items:center;gap:12px';
+    itemEl.innerHTML = `<span style="font-size:13px;flex:1">${file.name}</span><span class="status-badge status-pending">上传中...</span>`;
+    list.appendChild(itemEl);
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await fetch('/api/upload', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (d.success) {
+        itemEl.querySelector('.status-badge').className = 'status-badge status-done';
+        itemEl.querySelector('.status-badge').textContent = '上传成功';
+      } else {
+        itemEl.querySelector('.status-badge').className = 'status-badge status-error';
+        itemEl.querySelector('.status-badge').textContent = d.message || '失败';
+      }
+    } catch(e) {
+      itemEl.querySelector('.status-badge').className = 'status-badge status-error';
+      itemEl.querySelector('.status-badge').textContent = '网络错误';
+    }
+  }
+
+  document.getElementById('progressFill').style.width = '100%';
+  showToast(`成功上传 ${imgFiles.length} 张图片`, 'success');
+  setTimeout(() => {
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('progressFill').style.width = '0%';
+  }, 1500);
+}
+
+// ===== Detail Modal =====
+async function openDetail(id) {
+  currentImageId = id;
+  document.getElementById('detailModal').classList.add('show');
+  document.getElementById('recognizeResult').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  const r = await fetch(`/api/images/${id}`);
+  const d = await r.json();
+  if (!d.success) return;
+
+  const item = d.item;
+  document.getElementById('modalTitle').textContent = item.original_name;
+  document.getElementById('modalImg').src = `/uploads/${item.filename}`;
+  document.getElementById('infoName').textContent = item.original_name;
+  document.getElementById('infoSize').textContent = formatSize(item.file_size);
+  document.getElementById('infoTime').textContent = item.upload_time?.slice(0,16) || '-';
+  document.getElementById('infoStatus').innerHTML = `<span class="status-badge status-${item.status}">${statusLabel(item.status)}</span>`;
+  document.getElementById('notesInput').value = item.notes || '';
+  document.getElementById('tagsInput').value = item.tags || '';
+
+  // 根据是否已有识别结果，动态设置按钮文字
+  const hasResult = item.recognize_result && item.recognize_result.result;
+  document.getElementById('analyzeBtnText').textContent = hasResult ? '重新识别（百度AI）' : '开始百度AI识别';
+  document.getElementById('analyzeBtn').disabled = false;
+
+  if (hasResult) {
+    renderRecognizeResult(item.recognize_result);
+  } else {
+    document.getElementById('recognizeResult').innerHTML = `
+      <div class="empty" style="padding:40px 20px">
+        <div class="empty-icon"><svg viewBox="0 0 24 24" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <div class="empty-text">还未识别，点击上方按钮开始</div>
+      </div>`;
+  }
+}
+
+function renderRecognizeResult(result) {
+  const container = document.getElementById('recognizeResult');
+  if (!result || result.error) {
+    container.innerHTML = `<div style="padding:16px;background:var(--danger-light);border-radius:8px;color:var(--danger);font-size:13px">${result?.error || '识别失败'}</div>`;
+    return;
+  }
+
+  // 识别成功，确认API已连接
+    document.getElementById('apiDot').className = 'api-dot';
+    document.getElementById('apiStatus').textContent = '百度AI 已连接';
+    document.getElementById('demoNotice').style.display = 'none';
+
+  const items = result.result || [];
+  const colors = ['#6C63FF','#00C48C','#3B82F6','#FFB800','#FF7B54','#EC4899','#8B5CF6','#14B8A6'];
+  const tagClasses = ['result-top','result-high','result-mid','result-low'];
+
+  const tags = items.map((item, i) => {
+    const cls = tagClasses[Math.min(i, 3)];
+    const pct = Math.round((item.score || 0) * 100);
+    return `<div class="result-tag ${cls}" title="${item.root || ''}">
+      ${item.keyword}
+      <span style="font-size:11px;opacity:0.7">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  const bars = items.slice(0, 8).map((item, i) => {
+    const pct = Math.round((item.score || 0) * 100);
+    const color = colors[i % colors.length];
+    return `<div class="score-item">
+      <div class="score-name" title="${item.keyword}">${item.keyword}</div>
+      <div class="score-track"><div class="score-track-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="score-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  const typeMap = {general_basic:'通用识别',plant:'植物识别',animal:'动物识别',dish:'菜品识别',logo:'Logo识别'};
+
+  container.innerHTML = `
+    <div class="section-title" style="margin-bottom:10px">
+      <span class="dot dot-success"></span>
+      识别完成 · ${typeMap[result.type] || result.type}${result.demo ? ' (演示数据)' : ''}
+    </div>
+    <div class="result-tags">${tags}</div>
+    <div class="section-title" style="margin:16px 0 10px">
+      <span class="dot dot-primary"></span>
+      置信度分析
+    </div>
+    <div class="score-list">${bars}</div>
+  `;
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('detailModal')) closeModalBtn();
+}
+function closeModalBtn() {
+  document.getElementById('detailModal').classList.remove('show');
+  currentImageId = null;
+  loadImages();
+  loadStats();
+}
+
+// ===== Recognize =====
+function selectType(el) {
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  selectedType = el.dataset.type;
+}
+
+async function doRecognize() {
+  if (!currentImageId) return;
+  const btn = document.getElementById('analyzeBtn');
+  const btnText = document.getElementById('analyzeBtnText');
+  btn.disabled = true;
+  btnText.textContent = '识别中...';
+  document.getElementById('recognizeResult').innerHTML = '<div class="loading"><div class="spinner"></div><span style="color:var(--gray-mid);font-size:13px;margin-top:8px">AI 分析中，请稍候...</span></div>';
+
+  try {
+    const r = await fetch(`/api/recognize/${currentImageId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: selectedType })
+    });
+    const d = await r.json();
+    if (d.success) {
+      renderRecognizeResult(d.result);
+      showToast('识别完成！', 'success');
+    } else {
+      showToast(d.message || '识别失败', 'error');
+    }
+  } catch(e) {
+    showToast('请求失败，请检查服务', 'error');
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = '重新识别（百度AI）';
+  }
+}
+
+// ===== Notes =====
+async function saveNotes() {
+  if (!currentImageId) return;
+  const notes = document.getElementById('notesInput').value;
+  const tags = document.getElementById('tagsInput').value;
+  await fetch(`/api/images/${currentImageId}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ notes, tags })
+  });
+  showToast('已保存', 'success');
+}
+
+async function deleteCurrentImage() {
+  if (!currentImageId) return;
+  if (!confirm('确定删除该图片？此操作不可恢复。')) return;
+  const r = await fetch(`/api/images/${currentImageId}`, { method: 'DELETE' });
+  const d = await r.json();
+  if (d.success) {
+    showToast('已删除', 'success');
+    closeModalBtn();
+  }
+}
+
+// ===== Utils =====
+function formatSize(bytes) {
+  if (!bytes) return '-';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+
+function showToast(msg, type = '') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const icons = {success:'✓', error:'✕', warning:'!'};
+  t.innerHTML = `<span>${icons[type]||'ℹ'}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; t.style.transition = 'all .3s'; setTimeout(() => t.remove(), 300); }, 2800);
+}
+</script>
+</body>
+</html>
